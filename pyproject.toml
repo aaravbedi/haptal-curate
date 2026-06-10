@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "haptal-curate"
+version = "0.1.0"
+description = "Quality scoring and curation for robot demonstration datasets"
+authors = [{name = "Aarav Bedi", email = "aarav@haptal.ai"}]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = ["numpy>=1.21", "scipy>=1.7", "scikit-learn>=1.0", "h5py>=3.0"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["haptal_curate*"]
