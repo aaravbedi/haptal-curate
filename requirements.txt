@@ -1,4 +1,4 @@
-gradio>=4.44
+gradio>=6.0
 numpy>=1.21
 scipy>=1.7
 scikit-learn>=1.0
