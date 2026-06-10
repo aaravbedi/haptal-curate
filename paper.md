@@ -29,10 +29,11 @@ imitation learning policies.
 The package addresses a critical but often overlooked problem in robot learning:
 many existing dataset curation metrics achieve high discriminative accuracy on
 standard benchmarks not by detecting genuine quality differences, but by
-exploiting a length confound — defective demonstrations tend to run to the full
-episode horizon while clean ones terminate early. `haptal-curate` detects this
-confound automatically and recommends per-episode truncation to eliminate it,
-following the methodology of @haptal2026confound.
+exploiting a length confound — defective demonstrations (e.g. silent manipulation
+failures such as premature gripper release, @bedi2025failures) tend to run to
+the full episode horizon while clean ones terminate early. `haptal-curate`
+detects this confound automatically and recommends per-episode truncation to
+eliminate it, following the methodology of @bedi2025confound.
 
 # Statement of Need
 
@@ -44,7 +45,7 @@ exhibit degraded performance relative to those trained on curated subsets
 [@mandlekar2021matters].
 
 Existing curation approaches are often dataset-specific, use heuristic rules,
-or are evaluated under confounded conditions. `haptal-curate` provides:
+or are evaluated under confounded conditions [@bedi2025audit]. `haptal-curate` provides:
 
 1. **A confound-aware evaluation framework** that detects and corrects for
    length-based scoring artifacts.
@@ -116,6 +117,6 @@ summary = hc.report(score_result, curation_result)
 
 This work was developed at Haptal AI. The SPARC smoothness metric is based on
 @balasubramanian2015sparc. The length-confound analysis methodology follows
-the evaluation framework introduced in @haptal2026confound.
+the evaluation framework introduced in @bedi2025confound.
 
 # References
