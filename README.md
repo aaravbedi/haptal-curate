@@ -1,23 +1,8 @@
 # haptal-curate
 
-**Quality scoring and curation for robot demonstration datasets.**
+Quality scoring and curation for robot demonstration datasets.
 
-haptal-curate provides a modular toolkit for detecting and removing low-quality
-demonstrations from imitation learning datasets. It implements the confound-free
-evaluation methodology described in [arXiv:2606.10229](https://arxiv.org/abs/2606.10229),
-with built-in length-confound detection, phase-gated scoring, and a composable
-metric ensemble.
-
-## Features
-
-- **Multiple quality metrics** — smoothness (SPARC), gripper timing, entropy,
-  isolation forest, k-NN distance, trajectory alignment, and a weighted ensemble.
-- **Phase-gated scoring** — split demonstrations into PREGRASP / GRASP /
-  POST_CONTACT phases and score each independently.
-- **Length-confound detection** — Spearman-rank test with automatic severity
-  classification and truncation recommendation (truncation at T=324 by default).
-- **HDF5 loader** — reads LIBERO-format demonstration files directly.
-- **Simple API** — `score()` → `curate()` → `report()`.
+haptal-curate implements seven audited quality metrics for imitation learning datasets, backed by findings from arXiv:2606.05588 and arXiv:2606.10229. Given a dataset of robot demonstrations (e.g. LIBERO HDF5 files), the library scores each demo for quality and returns a curated subset, helping practitioners improve policy performance by removing defective demonstrations before training.
 
 ## Installation
 
@@ -25,113 +10,68 @@ metric ensemble.
 pip install haptal-curate
 ```
 
-For development:
-
-```bash
-git clone https://github.com/haptal-ai/haptal-curate
-cd haptal-curate
-pip install -e ".[dev]"
-```
-
-## Quick Start
+## Quickstart
 
 ```python
-import haptal_curate as hc
+from haptal_curate import score, curate, report
 
-# Score from an HDF5 file
-score_result = hc.score("path/to/demos.hdf5")
+# Score all demos in a LIBERO HDF5
+result = score("demos.hdf5", truncate_t=324)
 
-# Keep the top 50% by quality
-curation_result = hc.curate(score_result, fraction=0.5)
+# Keep the top 80%
+curation = curate(result, fraction=0.8)
 
 # Print a summary report
-summary = hc.report(score_result, curation_result)
-print(summary)
+summary = report(result, curation)
+print(f"Kept {summary['curation']['n_kept']} / {summary['n_demos']} demos")
+print(f"Top demos: {summary['top5_demo_ids']}")
 ```
 
-### Using a DemoDataset directly
+## The Length Confound Warning
+
+A critical finding from arXiv:2606.10229: without truncating trajectories to a fixed length, five of seven quality metrics achieve AUROC ≈ 1.000 on LIBERO datasets — not because they are good metrics, but because defective demonstrations (which contain an early-release gripper defect) tend to run the full 500-step horizon while clean demonstrations finish in ~325 steps. Any length-sensitive feature trivially separates the two classes. Truncating all demos to **TRUNC_T = 324** timesteps removes this confound and reveals an honest performance ceiling of ~0.91 AUROC. **Always set `truncate_t=324` (the default) when scoring LIBERO data.**
+
+## Available Metrics
+
+| Metric | Class | Description | Requires fit | Paper |
+|---|---|---|---|---|
+| `smoothness` | `SmoothnessMetric` | SPARC spectral arc length of action speed profile | No | arXiv:2606.05588 |
+| `entropy` | `EntropyMetric` | Negative action standard deviation | No | arXiv:2606.05588 |
+| `gripper_timing` | `GripperTimingMetric` | Normalized first-open timestep (early = defective) | No | arXiv:2606.10229 |
+| `isolation_forest` | `IsolationForestMetric` | Isolation Forest on action summary features | Yes | arXiv:2606.05588 |
+| `knn` | `KNNMetric` | Negative mean kNN distance to reference demos | Yes | arXiv:2606.05588 |
+| `trajectory_alignment` | `TrajectoryAlignmentMetric` | Cosine similarity to dataset mean trajectory | Yes | arXiv:2606.05588 |
+| `ensemble` | `EnsembleMetric` | Weighted combination (default: 0.5 smoothness + 0.5 gripper_timing) | No | arXiv:2606.10229 |
+
+## Phase-Gated Curation
+
+Phase-gated scoring runs each metric independently on PREGRASP, GRASP, and POST_CONTACT phases of each demonstration, then aggregates by rank normalization. This disentangles phase-specific quality signals and avoids penalizing naturally short phases.
 
 ```python
-import numpy as np
-from haptal_curate.types import Demo, DemoDataset
-import haptal_curate as hc
-
-demos = [
-    Demo(obs=np.zeros((100, 9)), actions=np.zeros((100, 7)),
-         episode_length=100, demo_id=f"demo_{i}")
-    for i in range(20)
-]
-dataset = DemoDataset(demos=demos)
-
-score_result = hc.score(dataset)
-curation_result = hc.curate(score_result, fraction=0.7)
-```
-
-### Phase-gated scoring
-
-```python
-from haptal_curate.phase import PhaseGatedScorer
+from haptal_curate import load_demos
 from haptal_curate.metrics import SmoothnessMetric
+from haptal_curate.phase import PhaseGatedScorer
 
+dataset = load_demos("demos.hdf5", truncate_t=324)
 scorer = PhaseGatedScorer(SmoothnessMetric(), strategy="uniform")
 scorer.fit(dataset)
 scores = scorer.score_dataset(dataset)
 ```
 
-## Metrics
-
-| Metric | Description | Requires fit |
-|--------|-------------|:---:|
-| `SmoothnessMetric` | SPARC spectral arc length of action speed profile | no |
-| `EntropyMetric` | Negative mean action std (low variance = cleaner) | no |
-| `GripperTimingMetric` | Normalized timestep of first gripper open event | no |
-| `IsolationForestMetric` | Isolation Forest on action summary features | yes |
-| `KNNMetric` | Negative mean k-NN distance to reference set | yes |
-| `TrajectoryAlignmentMetric` | Cosine similarity to mean clean trajectory | yes |
-| `EnsembleMetric` | Weighted rank-normalized combination | no |
-
-## API Reference
-
-### `score(hdf5_path_or_dataset, metrics=None, truncate_t=324, fit_metrics=True)`
-
-Score demonstrations. Returns a `ScoreResult`.
-
-### `curate(score_result, fraction=0.5, strategy="top_fraction")`
-
-Select the highest-quality subset. Strategies: `top_fraction`, `threshold`.
-Returns a `CurationResult`.
-
-### `report(score_result, curation_result=None, output_path=None)`
-
-Generate a quality summary dict (optionally writes JSON). Includes length-confound
-analysis via Spearman rank correlation.
-
-### `load_demos(hdf5_path, truncate_t=324, max_demos=None)`
-
-Load demonstrations from an HDF5 file. Returns a `DemoDataset`.
-
-## Background
-
-Length-biased metrics achieve near-perfect AUROC on LIBERO not because they detect
-quality, but because defective demonstrations run to the full episode horizon while
-clean ones terminate early. Truncating to a fixed length (TRUNC_T=324 steps by
-default) eliminates this confound. haptal-curate detects and warns about this
-confound automatically via `ConfoundReport`.
-
 ## Citation
 
-If you use haptal-curate in your research, please cite:
-
 ```bibtex
-@software{haptal_curate_2026,
-  author    = {Bedi, Aarav},
-  title     = {haptal-curate: Quality Scoring and Curation for Robot Demonstration Datasets},
-  year      = {2026},
-  url       = {https://github.com/haptal-ai/haptal-curate},
-  version   = {0.1.0}
+@article{bedi2025audit,
+  title={Auditing Curation Metrics for Robot Demonstration Datasets},
+  author={Bedi, Aarav},
+  journal={arXiv preprint arXiv:2606.05588},
+  year={2025}
+}
+
+@article{bedi2025confound,
+  title={Episode-Length Confounds in Robot Demonstration Curation},
+  author={Bedi, Aarav},
+  journal={arXiv preprint arXiv:2606.10229},
+  year={2025}
 }
 ```
-
-## License
-
-MIT
