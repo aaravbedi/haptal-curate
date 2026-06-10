@@ -1,3 +1,14 @@
+---
+title: haptal-curate
+emoji: 🤖
+colorFrom: green
+colorTo: gray
+sdk: gradio
+sdk_version: 4.44.0
+app_file: app.py
+pinned: false
+---
+
 # haptal-curate
 
 Quality scoring and curation for robot demonstration datasets.
