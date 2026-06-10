@@ -1,0 +1,41 @@
+cff-version: 1.2.0
+message: "If you use haptal-curate in your research, please cite it as below."
+type: software
+title: "haptal-curate: Quality Scoring and Curation for Robot Demonstration Datasets"
+version: 0.1.0
+date-released: "2026-06-10"
+url: "https://github.com/haptal-ai/haptal-curate"
+license: MIT
+authors:
+  - family-names: Bedi
+    given-names: Aarav
+    email: aarav@haptal.ai
+    affiliation: Haptal AI
+keywords:
+  - robotics
+  - imitation learning
+  - dataset curation
+  - quality metrics
+  - demonstration datasets
+abstract: >-
+  haptal-curate is a Python package for automated quality scoring and curation
+  of robot demonstration datasets. It provides a modular suite of quality
+  metrics (smoothness, gripper timing, entropy, isolation forest, k-NN,
+  trajectory alignment, and a weighted ensemble), phase-gated scoring for
+  manipulation tasks, and automatic length-confound detection via Spearman rank
+  correlation.
+references:
+  - type: article
+    title: "SPARC: An appropriate smoothness measure for robotic paths"
+    authors:
+      - family-names: Balasubramanian
+        given-names: Sivakumar
+    journal: IEEE Robotics and Automation Letters
+    year: 2015
+  - type: software
+    title: "LIBERO: Benchmarking Knowledge Transfer in Lifelong Robot Learning"
+    authors:
+      - family-names: Liu
+        given-names: Bo
+    year: 2023
+    url: "https://github.com/Lifelong-Robot-Learning/LIBERO"
