@@ -15,10 +15,30 @@ jobs:
           fetch-depth: 0
           lfs: true
 
-      - name: Push to HuggingFace Space
+      - name: Inject HF Space metadata into README and push
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
+          # Prepend HF Space YAML frontmatter to README for the Space only
+          FRONTMATTER="---
+          title: haptal-curate
+          emoji: 🤖
+          colorFrom: green
+          colorTo: gray
+          sdk: gradio
+          sdk_version: 6.0.0
+          app_file: app.py
+          pinned: false
+          ---
+
+          "
+          printf '%s' "$FRONTMATTER" | cat - README.md > README_hf.md
+          mv README_hf.md README.md
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions"
+          git add README.md
+          git commit -m "inject HF Space metadata" || true
+
           git push --force \
             https://HaptalAI:$HF_TOKEN@huggingface.co/spaces/HaptalAI/haptal-curate \
-            main:main
+            HEAD:main
